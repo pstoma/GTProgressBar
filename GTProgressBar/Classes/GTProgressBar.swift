@@ -156,6 +156,13 @@ public class GTProgressBar: UIView {
     }
     
     @IBInspectable
+    public var displayInnerShadow: Bool = true {
+        didSet {
+            self.setNeedsLayout()
+        }
+    }
+    
+    @IBInspectable
     public var cornerRadius: CGFloat = 0.0 {
         didSet {
             self.layer.masksToBounds = cornerRadius != 0.0
@@ -260,6 +267,8 @@ public class GTProgressBar: UIView {
     public override func layoutSubviews() {
         updateProgressLabelText()
         updateViewsLocation()
+        
+        updateInnerShadow()
     }
     
     public override func sizeThatFits(_ size: CGSize) -> CGSize {
@@ -278,6 +287,49 @@ public class GTProgressBar: UIView {
 
         fillView.frame = frameCalculator.fillViewFrameFor(progress: _progress)
         fillView.layer.cornerRadius = cornerRadiusFor(view: fillView)
+    }
+    
+    private func updateInnerShadow() {
+        let shadowKey = "innerShadow"
+
+        let shadowLayers = layer.sublayers?.filter({ (layer) -> Bool in
+            if let shadowed = layer.value(forKey: shadowKey) as? Bool {
+                return shadowed
+            }
+
+            return false
+        }) ?? []
+            
+        shadowLayers.forEach {
+            $0.removeFromSuperlayer()
+        }
+
+        guard displayInnerShadow else {
+            layer.cornerRadius = 0
+            layer.masksToBounds = false
+            return
+        }
+
+
+        let innerShadow = CALayer()
+        innerShadow.frame = bounds
+        innerShadow.setValue(true, forKey: shadowKey)
+
+        let path = UIBezierPath(roundedRect: innerShadow.bounds.insetBy(dx: -1, dy: -1), cornerRadius: fillView.frame.height / 2)
+        let cutout = UIBezierPath(roundedRect: innerShadow.bounds, cornerRadius: backgroundView.frame.height / 2).reversing()
+        path.append(cutout)
+        innerShadow.shadowPath = path.cgPath
+        innerShadow.masksToBounds = true
+        // Shadow properties
+        innerShadow.shadowColor = UIColor(white: 0, alpha: 0.3).cgColor
+        innerShadow.shadowOffset = CGSize(width: 0, height: 1)
+        innerShadow.shadowOpacity = 1
+        innerShadow.shadowRadius = 1
+        // Add
+        layer.addSublayer(innerShadow)
+        
+        layer.cornerRadius = backgroundView.frame.height / 2
+        layer.masksToBounds = true
     }
     
     private func createFrameCalculator() -> FrameCalculator {
@@ -340,9 +392,9 @@ public class GTProgressBar: UIView {
         
         switch orientation {
         case .horizontal:
-            return view.frame.height / 2 * 0.7
+            return view.frame.height / 2
         case .vertical:
-            return view.frame.width / 2 * 0.7
+            return view.frame.width / 2
         }
     }
     
